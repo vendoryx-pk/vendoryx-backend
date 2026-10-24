@@ -26,6 +26,6 @@ Set these in the Space **Settings → Variables and secrets**:
 - `VENDORYX_DB_USER`
 - `VENDORYX_DB_PASSWORD`
 - `VENDORYX_JWT_SECRET` (min 32 characters)
-- `VENDORYX_CORS_ORIGIN` (your frontend origin)
+- `VENDORYX_CORS_ORIGIN` (comma-separated origins, e.g. `https://vendoryx-frontend.pages.dev,http://localhost:4200`)
 
 More detail: see [README_DEPLOY.md](README_DEPLOY.md).

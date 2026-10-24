@@ -28,7 +28,7 @@ public class LoginServlet extends HttpServlet {
 
     @Override
     protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        CorsUtil.apply(resp);
+        CorsUtil.apply(req, resp);
         resp.setStatus(HttpServletResponse.SC_OK);
     }
 
@@ -36,7 +36,7 @@ public class LoginServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        CorsUtil.apply(response);
+        CorsUtil.apply(request, response);
 
         try {
             JsonObject body = JsonUtil.parseObject(JsonUtil.readBody(request));

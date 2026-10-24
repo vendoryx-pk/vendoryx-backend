@@ -27,7 +27,7 @@ public class UserUpdateServlet extends HttpServlet {
 
     @Override
     protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        CorsUtil.apply(resp);
+        CorsUtil.apply(req, resp);
         resp.setStatus(HttpServletResponse.SC_OK);
     }
 
@@ -44,7 +44,7 @@ public class UserUpdateServlet extends HttpServlet {
     }
 
     private void handleUpdate(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        CorsUtil.apply(response);
+        CorsUtil.apply(request, response);
 
         try {
             Integer userId = RoleGuard.getUserId(request);

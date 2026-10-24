@@ -31,7 +31,7 @@ public class ShopServlet extends HttpServlet {
 
     @Override
     protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        CorsUtil.apply(resp);
+        CorsUtil.apply(req, resp);
         resp.setStatus(HttpServletResponse.SC_OK);
     }
 
@@ -39,7 +39,7 @@ public class ShopServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        CorsUtil.apply(response);
+        CorsUtil.apply(request, response);
         if (!RoleGuard.requireRole(request, response, "ADMIN", "DEVELOPER")) {
             return;
         }
@@ -76,7 +76,7 @@ public class ShopServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        CorsUtil.apply(response);
+        CorsUtil.apply(request, response);
         if (!RoleGuard.requireRole(request, response, "ADMIN", "DEVELOPER")) {
             return;
         }
@@ -116,7 +116,7 @@ public class ShopServlet extends HttpServlet {
     protected void doPut(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        CorsUtil.apply(response);
+        CorsUtil.apply(request, response);
         if (!RoleGuard.requireRole(request, response, "ADMIN", "DEVELOPER")) {
             return;
         }
@@ -157,7 +157,7 @@ public class ShopServlet extends HttpServlet {
     protected void doDelete(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        CorsUtil.apply(response);
+        CorsUtil.apply(request, response);
         if (!RoleGuard.requireRole(request, response, "ADMIN", "DEVELOPER")) {
             return;
         }

@@ -31,14 +31,14 @@ public class OrderServlet extends HttpServlet {
 
     @Override
     protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        CorsUtil.apply(resp);
+        CorsUtil.apply(req, resp);
         resp.setStatus(HttpServletResponse.SC_OK);
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        CorsUtil.apply(response);
+        CorsUtil.apply(request, response);
         if (!RoleGuard.requireRole(request, response, "SHOP_USER")) {
             return;
         }
@@ -84,7 +84,7 @@ public class OrderServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        CorsUtil.apply(response);
+        CorsUtil.apply(request, response);
         if (!RoleGuard.requireRole(request, response, "SHOP_USER")) {
             return;
         }

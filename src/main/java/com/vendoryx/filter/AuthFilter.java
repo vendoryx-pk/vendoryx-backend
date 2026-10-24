@@ -2,7 +2,6 @@ package com.vendoryx.filter;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.vendoryx.util.CorsUtil;
 import com.vendoryx.util.JwtUtil;
 import com.vendoryx.util.RoleGuard;
 import jakarta.servlet.Filter;
@@ -19,7 +18,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Protects /api/* except OPTIONS and /api/auth/login.
+ * Protects /api/* except /api/auth/login.
+ * OPTIONS preflight is handled earlier by {@link CorsFilter}.
  */
 public class AuthFilter implements Filter {
 
@@ -30,10 +30,9 @@ public class AuthFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
 
-        CorsUtil.apply(resp);
-
+        // Belt-and-suspenders if CorsFilter mapping changes
         if ("OPTIONS".equalsIgnoreCase(req.getMethod())) {
-            resp.setStatus(HttpServletResponse.SC_OK);
+            resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             return;
         }
 
