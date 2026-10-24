@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -315,6 +316,167 @@ public class OrderDAO {
             order.setStatusHistory(getHistory(conn, orderId));
             return order;
         }
+    }
+
+    /**
+     * Route sheet for a visit day: shops that have matching orders, with items.
+     * Uses 2 queries (day lookup + one JOIN of orders/items) — no N+1.
+     */
+    public Map<String, Object> getRouteSheet(int dayId, Integer cityId, List<String> statuses,
+                                             LocalDate from, LocalDate to) throws SQLException {
+        String dayName;
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT day_name FROM visit_days WHERE day_id = ?")) {
+            ps.setInt(1, dayId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+                dayName = rs.getString("day_name");
+            }
+        }
+
+        StringBuilder sql = new StringBuilder("""
+                SELECT o.order_id, o.order_number, o.order_status, o.created_at, o.notes, o.final_amount,
+                       s.shop_id, s.shop_code, s.shop_name, s.contact_person, s.phone, s.address,
+                       c.city_name,
+                       oi.product_id, p.sku, p.product_name, p.unit_of_measure,
+                       oi.quantity, oi.unit_price_at_purchase, oi.subtotal
+                FROM orders o
+                JOIN shops s ON o.shop_id = s.shop_id
+                JOIN cities c ON s.city_id = c.city_id
+                LEFT JOIN order_items oi ON oi.order_id = o.order_id
+                LEFT JOIN products p ON oi.product_id = p.product_id
+                WHERE s.day_id = ?
+                """);
+        List<Object> params = new ArrayList<>();
+        params.add(dayId);
+
+        sql.append(" AND o.order_status IN (");
+        for (int i = 0; i < statuses.size(); i++) {
+            sql.append(i == 0 ? "?" : ",?");
+            params.add(statuses.get(i));
+        }
+        sql.append(")");
+
+        if (cityId != null) {
+            sql.append(" AND s.city_id = ?");
+            params.add(cityId);
+        }
+        if (from != null) {
+            sql.append(" AND o.created_at >= ?");
+            params.add(Timestamp.valueOf(from.atStartOfDay()));
+        }
+        if (to != null) {
+            sql.append(" AND o.created_at < ?");
+            params.add(Timestamp.valueOf(to.plusDays(1).atStartOfDay()));
+        }
+        sql.append(" ORDER BY s.shop_name ASC, o.created_at ASC, oi.product_id ASC");
+
+        Map<Integer, Map<String, Object>> shopsById = new LinkedHashMap<>();
+        Map<Integer, Map<String, Object>> ordersById = new LinkedHashMap<>();
+        Map<Integer, Map<String, Object>> productTotalsById = new LinkedHashMap<>();
+        int orderCount = 0;
+        BigDecimal grandTotal = BigDecimal.ZERO;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            bind(ps, params);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int shopId = rs.getInt("shop_id");
+                    Map<String, Object> shop = shopsById.get(shopId);
+                    if (shop == null) {
+                        shop = new LinkedHashMap<>();
+                        shop.put("shopId", shopId);
+                        shop.put("shopCode", rs.getString("shop_code"));
+                        shop.put("shopName", rs.getString("shop_name"));
+                        shop.put("contactPerson", rs.getString("contact_person"));
+                        shop.put("phone", rs.getString("phone"));
+                        shop.put("address", rs.getString("address"));
+                        shop.put("cityName", rs.getString("city_name"));
+                        shop.put("shopTotal", BigDecimal.ZERO);
+                        shop.put("orders", new ArrayList<Map<String, Object>>());
+                        shopsById.put(shopId, shop);
+                    }
+
+                    int orderId = rs.getInt("order_id");
+                    Map<String, Object> order = ordersById.get(orderId);
+                    if (order == null) {
+                        order = new LinkedHashMap<>();
+                        order.put("orderId", orderId);
+                        order.put("orderNumber", rs.getString("order_number"));
+                        order.put("status", rs.getString("order_status"));
+                        order.put("createdAt", rs.getTimestamp("created_at"));
+                        order.put("notes", rs.getString("notes"));
+                        BigDecimal finalAmount = rs.getBigDecimal("final_amount");
+                        if (finalAmount == null) {
+                            finalAmount = BigDecimal.ZERO;
+                        }
+                        order.put("finalAmount", finalAmount);
+                        order.put("items", new ArrayList<Map<String, Object>>());
+                        ordersById.put(orderId, order);
+
+                        @SuppressWarnings("unchecked")
+                        List<Map<String, Object>> shopOrders =
+                                (List<Map<String, Object>>) shop.get("orders");
+                        shopOrders.add(order);
+
+                        shop.put("shopTotal",
+                                ((BigDecimal) shop.get("shopTotal")).add(finalAmount));
+                        grandTotal = grandTotal.add(finalAmount);
+                        orderCount++;
+                    }
+
+                    int productId = rs.getInt("product_id");
+                    if (!rs.wasNull()) {
+                        Map<String, Object> item = new LinkedHashMap<>();
+                        item.put("productId", productId);
+                        item.put("sku", rs.getString("sku"));
+                        item.put("productName", rs.getString("product_name"));
+                        item.put("unitOfMeasure", rs.getString("unit_of_measure"));
+                        int qty = rs.getInt("quantity");
+                        item.put("quantity", qty);
+                        item.put("unitPrice", rs.getBigDecimal("unit_price_at_purchase"));
+                        item.put("subtotal", rs.getBigDecimal("subtotal"));
+
+                        @SuppressWarnings("unchecked")
+                        List<Map<String, Object>> items =
+                                (List<Map<String, Object>>) order.get("items");
+                        items.add(item);
+
+                        Map<String, Object> total = productTotalsById.get(productId);
+                        if (total == null) {
+                            total = new LinkedHashMap<>();
+                            total.put("sku", rs.getString("sku"));
+                            total.put("productName", rs.getString("product_name"));
+                            total.put("unitOfMeasure", rs.getString("unit_of_measure"));
+                            total.put("totalQuantity", 0);
+                            productTotalsById.put(productId, total);
+                        }
+                        total.put("totalQuantity", ((Integer) total.get("totalQuantity")) + qty);
+                    }
+                }
+            }
+        }
+
+        Map<String, Object> filters = new LinkedHashMap<>();
+        filters.put("dayId", dayId);
+        filters.put("cityId", cityId);
+        filters.put("status", statuses);
+        filters.put("from", from != null ? from.toString() : null);
+        filters.put("to", to != null ? to.toString() : null);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("dayName", dayName);
+        result.put("generatedAt", Instant.now().toString());
+        result.put("filters", filters);
+        result.put("orderCount", orderCount);
+        result.put("grandTotal", grandTotal);
+        result.put("shops", new ArrayList<>(shopsById.values()));
+        result.put("productTotals", new ArrayList<>(productTotalsById.values()));
+        return result;
     }
 
     private Map<String, Object> pagedList(String where, List<Object> params, int page, int size) throws SQLException {

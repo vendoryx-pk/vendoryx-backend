@@ -92,3 +92,13 @@ Content-Type: application/json
   "stockQuantity": 100,
   "lowStockThreshold": 10
 }
+
+### 13) Admin — route sheet (open orders for a visit day)
+### dayId required (visit_days.day_id). cityId/status/from/to optional.
+### Default status = PENDING,APPROVED,PROCESSING,PACKED,OUT_FOR_DELIVERY
+GET {{baseUrl}}/api/admin/orders/route-sheet?dayId=1&cityId=1&from=2026-01-01&to=2026-12-31
+Authorization: Bearer {{adminToken}}
+
+### 14) Admin — route sheet filtered by status
+GET {{baseUrl}}/api/admin/orders/route-sheet?dayId=1&status=PENDING,APPROVED
+Authorization: Bearer {{adminToken}}

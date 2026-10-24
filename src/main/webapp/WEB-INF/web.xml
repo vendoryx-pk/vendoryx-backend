@@ -139,4 +139,13 @@
         <servlet-name>AdminOrderStatusServlet</servlet-name>
         <url-pattern>/api/admin/orders/status</url-pattern>
     </servlet-mapping>
+
+    <servlet>
+        <servlet-name>AdminRouteSheetServlet</servlet-name>
+        <servlet-class>com.vendoryx.servlet.AdminRouteSheetServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>AdminRouteSheetServlet</servlet-name>
+        <url-pattern>/api/admin/orders/route-sheet</url-pattern>
+    </servlet-mapping>
 </web-app>
