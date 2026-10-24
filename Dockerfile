@@ -3,25 +3,32 @@ FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 
 COPY pom.xml .
-RUN mvn -q -B dependency:go-offline
-
 COPY src ./src
-RUN mvn -q -B -DskipTests package dependency:copy-dependencies -DoutputDirectory=target/dependency
+# Single package step (skip flaky dependency:go-offline). Artifacts:
+#   target/classes, target/dependency/*.jar, src/main/webapp (WEB-INF/web.xml)
+RUN mvn -B -DskipTests package dependency:copy-dependencies \
+    -DexcludeScope=provided \
+    -DoutputDirectory=target/dependency
 
-# ---- run (Hugging Face Spaces: non-root uid 1000) ----
+# ---- run (Render / Hugging Face Spaces: non-root uid 1000) ----
 FROM eclipse-temurin:17-jre
 
-RUN useradd -m -u 1000 user
-USER user
+# Temurin Ubuntu images often already have uid 1000 ("ubuntu"). Creating
+# another user with -u 1000 fails the build — reuse uid/gid 1000 instead.
+RUN mkdir -p /home/user/app/tomcat-base \
+ && (getent passwd 1000 >/dev/null || useradd -m -u 1000 user) \
+ && chown -R 1000:1000 /home/user
+
+USER 1000
 WORKDIR /home/user/app
 
 ENV PORT=8080
 ENV VENDORYX_WEBAPP_DIR=/home/user/app/webapp
 ENV VENDORYX_CLASSES_DIR=/home/user/app/classes
 
-COPY --chown=user:user --from=build /app/target/classes /home/user/app/classes
-COPY --chown=user:user --from=build /app/target/dependency /home/user/app/dependency
-COPY --chown=user:user --from=build /app/src/main/webapp /home/user/app/webapp
+COPY --chown=1000:1000 --from=build /app/target/classes /home/user/app/classes
+COPY --chown=1000:1000 --from=build /app/target/dependency /home/user/app/dependency
+COPY --chown=1000:1000 --from=build /app/src/main/webapp /home/user/app/webapp
 
 EXPOSE 8080
 
