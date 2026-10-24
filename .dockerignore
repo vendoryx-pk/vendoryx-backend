@@ -1,0 +1,14 @@
+target
+.git
+.github
+.vscode
+.idea
+.history
+docs
+*.md
+.env
+**/.env*
+*.log
+**/*.class
+**/CheckHash.java
+**/GenHash.java

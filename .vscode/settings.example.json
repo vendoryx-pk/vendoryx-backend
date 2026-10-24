@@ -1,0 +1,12 @@
+{
+  "rest-client.environmentVariables": {
+    "$shared": {},
+    "local": {
+      "baseUrl": "http://localhost:8080",
+      "adminUser": "admin@example.com",
+      "adminPassword": "CHANGE_ME_ADMIN_PASSWORD",
+      "shopUser": "shopuser_example",
+      "shopPassword": "CHANGE_ME_SHOP_PASSWORD"
+    }
+  }
+}
