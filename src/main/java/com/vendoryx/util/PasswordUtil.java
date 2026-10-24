@@ -21,17 +21,31 @@ public final class PasswordUtil {
         if (plain == null || stored == null || stored.isBlank()) {
             return false;
         }
-        if (isBcrypt(stored)) {
-            return BCrypt.checkpw(plain, stored);
+        String value = stored.trim();
+        if (isBcrypt(value)) {
+            return BCrypt.checkpw(plain, value);
         }
-        return stored.equals(plain);
+        return value.equals(plain);
     }
 
+    /**
+     * True only for legacy plain-text stored passwords (not starting with "$2").
+     * BCrypt hashes never need rehash here — including older cost factors.
+     */
     public static boolean needsRehash(String stored) {
-        return stored != null && !stored.isBlank() && !isBcrypt(stored);
+        return isLegacyPlainText(stored);
     }
 
-    private static boolean isBcrypt(String stored) {
-        return stored.startsWith("$2");
+    /** Stored value is legacy plain text (must be migrated once to BCrypt). */
+    public static boolean isLegacyPlainText(String stored) {
+        if (stored == null || stored.isBlank()) {
+            return false;
+        }
+        return !isBcrypt(stored.trim());
+    }
+
+    /** BCrypt hashes start with "$2" ($2a$ / $2b$ / $2y$). */
+    public static boolean isBcrypt(String stored) {
+        return stored != null && stored.trim().startsWith("$2");
     }
 }

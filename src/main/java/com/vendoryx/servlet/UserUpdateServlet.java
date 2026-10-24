@@ -19,7 +19,8 @@ import java.sql.SQLException;
 /**
  * PUT|POST /api/users/update
  * userId comes from JWT (not body).
- * Password change requires currentPassword + new password; new password stored as BCrypt.
+ * password_hash is updated only when non-empty newPassword is sent AND currentPassword verifies.
+ * Name/email-only updates never touch password_hash. Body key "password_hash" is ignored.
  */
 public class UserUpdateServlet extends HttpServlet {
 
@@ -56,28 +57,30 @@ public class UserUpdateServlet extends HttpServlet {
             JsonObject body = JsonUtil.parseObject(JsonUtil.readBody(request));
             String fullName = JsonUtil.textAny(body, "fullName", "full_name");
             String email = JsonUtil.text(body, "email");
+            // Do not accept "password_hash" — clients must send plain newPassword only
             String newPassword = JsonUtil.textAny(body, "password", "newPassword");
             String currentPassword = JsonUtil.textAny(body, "currentPassword", "oldPassword");
 
             boolean hasFullName = fullName != null && !fullName.isBlank();
             boolean hasEmail = email != null && !email.isBlank();
-            boolean hasPassword = newPassword != null && !newPassword.isBlank();
+            boolean wantsPasswordChange = newPassword != null && !newPassword.isBlank();
 
-            if (!hasFullName && !hasEmail && !hasPassword) {
+            if (!hasFullName && !hasEmail && !wantsPasswordChange) {
                 JsonUtil.writeError(response, HttpServletResponse.SC_BAD_REQUEST,
                         "Provide fullName, email, and/or password to update");
                 return;
             }
 
+            // null → updateProfile omits password_hash from SQL
             String newPasswordHash = null;
-            if (hasPassword) {
+            if (wantsPasswordChange) {
                 if (currentPassword == null || currentPassword.isBlank()) {
                     JsonUtil.writeError(response, HttpServletResponse.SC_BAD_REQUEST,
                             "currentPassword is required to change password");
                     return;
                 }
                 String storedHash = userDAO.getPasswordHash(userId);
-                if (!PasswordUtil.verify(currentPassword, storedHash)) {
+                if (storedHash == null || !PasswordUtil.verify(currentPassword, storedHash)) {
                     JsonUtil.writeError(response, HttpServletResponse.SC_UNAUTHORIZED,
                             "Invalid username or password");
                     return;
@@ -98,7 +101,7 @@ public class UserUpdateServlet extends HttpServlet {
                 return;
             }
 
-            String message = hasPassword
+            String message = wantsPasswordChange
                     ? "Password updated successfully"
                     : "Profile updated successfully";
             JsonUtil.writeSuccess(response, message, updated);

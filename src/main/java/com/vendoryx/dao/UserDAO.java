@@ -16,7 +16,8 @@ public class UserDAO {
 
     /**
      * Validates username + password against the database (is_active required).
-     * Migrates legacy plain-text password_hash to BCrypt on successful login.
+     * Migrates legacy plain-text password_hash to BCrypt once on successful login.
+     * BCrypt users: password_hash is never written on login (last_login_at only, via LoginServlet).
      *
      * @return user with role + allowed pages, or null if credentials are invalid
      */
@@ -66,7 +67,9 @@ public class UserDAO {
             return null;
         }
 
-        if (PasswordUtil.needsRehash(storedHash)) {
+        // Only migrate legacy plain text → BCrypt. Never rewrite existing BCrypt hashes
+        // (including older cost factors) on login.
+        if (PasswordUtil.isLegacyPlainText(storedHash)) {
             updatePasswordHash(user.getUserId(), PasswordUtil.hash(password));
         }
 
@@ -172,6 +175,8 @@ public class UserDAO {
 
     /**
      * Updates profile fields. newPasswordHash must already be BCrypt-hashed when non-null.
+     * When newPasswordHash is null, password_hash is omitted from the UPDATE entirely
+     * (name/email-only saves never touch the password).
      */
     public User updateProfile(int userId, String fullName, String email, String newPasswordHash) throws SQLException {
         StringBuilder sql = new StringBuilder("UPDATE users SET ");
@@ -185,6 +190,7 @@ public class UserDAO {
             sql.append("email = ?, ");
             params.add(email.trim());
         }
+        // password_hash only when servlet already verified currentPassword and hashed newPassword
         if (newPasswordHash != null && !newPasswordHash.isBlank()) {
             sql.append("password_hash = ?, ");
             params.add(newPasswordHash);

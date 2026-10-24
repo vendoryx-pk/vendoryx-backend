@@ -86,26 +86,28 @@ Update name + email:
 }
 ```
 
-Update password only:
+Update password only (currentPassword required; never send password_hash):
 ```json
 {
-  "userId": 1,
-  "password": "YOUR_NEW_PASSWORD"
+  "newPassword": "YOUR_NEW_PASSWORD",
+  "currentPassword": "YOUR_CURRENT_PASSWORD"
 }
 ```
 
 Update everything:
 ```json
 {
-  "userId": 1,
   "fullName": "Example Updated",
   "email": "new@email.com",
-  "password": "YOUR_NEW_PASSWORD"
+  "newPassword": "YOUR_NEW_PASSWORD",
+  "currentPassword": "YOUR_CURRENT_PASSWORD"
 }
 ```
 
-Accepted password field names (any one): `password` | `newPassword` | `password_hash`  
-Accepted id field names: `userId` | `user_id`
+Accepted new-password field names (any one): `password` | `newPassword`  
+Accepted current-password field names (any one): `currentPassword` | `oldPassword`  
+Do **not** send `password_hash` — name/email-only saves must omit password fields so the DB hash is untouched.  
+`userId` comes from the JWT (body userId is ignored).
 
 **Success (HTTP 200):**
 ```json
