@@ -8,20 +8,13 @@ import java.sql.SQLException;
 
 /**
  * HikariCP-backed connection factory.
- * Requires: VENDORYX_DB_URL, VENDORYX_DB_USER, VENDORYX_DB_PASSWORD (OS env or .env).
+ * Requires env: VENDORYX_DB_URL, VENDORYX_DB_USER, VENDORYX_DB_PASSWORD.
  */
 public final class DBConnection {
 
-    private static final String URL;
-    private static final String USER;
-    private static final String PASSWORD;
-
-    static {
-        DotEnv.load();
-        URL = requireEnv("VENDORYX_DB_URL");
-        USER = requireEnv("VENDORYX_DB_USER");
-        PASSWORD = requireEnv("VENDORYX_DB_PASSWORD");
-    }
+    private static final String URL = requireEnv("VENDORYX_DB_URL");
+    private static final String USER = requireEnv("VENDORYX_DB_USER");
+    private static final String PASSWORD = requireEnv("VENDORYX_DB_PASSWORD");
 
     private static volatile HikariDataSource dataSource;
 
@@ -50,11 +43,11 @@ public final class DBConnection {
     }
 
     private static String requireEnv(String key) {
-        String value = DotEnv.get(key);
+        String value = System.getenv(key);
         if (value == null || value.isBlank()) {
             throw new ExceptionInInitializerError(
                     "Missing required environment variable: " + key
-                            + ". Set env vars or create .env (see .env.example).");
+                            + ". Set VENDORYX_DB_URL, VENDORYX_DB_USER, and VENDORYX_DB_PASSWORD before starting.");
         }
         return value.trim();
     }

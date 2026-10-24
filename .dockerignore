@@ -5,10 +5,10 @@ target
 .idea
 .history
 docs
-*.md
 .env
 **/.env*
 *.log
 **/*.class
 **/CheckHash.java
 **/GenHash.java
+# Keep README.md for HF Spaces front matter (not ignored)

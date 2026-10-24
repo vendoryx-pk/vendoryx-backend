@@ -40,14 +40,9 @@ docker run --rm -p 8080:8080 \
 ## Local without Docker
 
 ```bash
-# Option A: copy .env.example → .env and fill secrets (recommended for IDE Run)
-cp .env.example .env
-
-# Option B: export OS env vars, then:
+# set the four required env vars first, then:
 mvn clean package
 java -Xmx320m -XX:+UseSerialGC -cp "target/classes;target/dependency/*" com.vendoryx.AppServer
 ```
 
 (On Linux/macOS use `:` instead of `;` in the classpath.)
-
-`.env` is gitignored. AppServer loads it automatically for local runs; OS env still overrides `.env`.

@@ -13,13 +13,19 @@ import java.io.File;
 public class AppServer {
 
     public static void main(String[] args) throws Exception {
-        com.vendoryx.config.DotEnv.load();
         EnvConfig.validateRequired();
 
         int port = EnvConfig.port();
         Tomcat tomcat = new Tomcat();
         tomcat.setPort(port);
         tomcat.setHostname("0.0.0.0");
+
+        // Writable Tomcat work/temp under current user (needed for non-root / HF Spaces)
+        File tomcatBase = resolveTomcatBaseDir();
+        if (!tomcatBase.exists() && !tomcatBase.mkdirs()) {
+            throw new IllegalStateException("Cannot create Tomcat base dir: " + tomcatBase.getAbsolutePath());
+        }
+        tomcat.setBaseDir(tomcatBase.getAbsolutePath());
 
         Connector connector = tomcat.getConnector();
         connector.setProperty("address", "0.0.0.0");
@@ -54,10 +60,27 @@ public class AppServer {
         tomcat.getServer().await();
     }
 
+    private static File resolveTomcatBaseDir() {
+        String fromEnv = System.getenv("VENDORYX_TOMCAT_BASE");
+        if (fromEnv != null && !fromEnv.isBlank()) {
+            return new File(fromEnv.trim());
+        }
+        // Hugging Face / container layout: /home/user/app
+        File hfApp = new File("/home/user/app");
+        if (hfApp.isDirectory()) {
+            return new File(hfApp, "tomcat-base");
+        }
+        return new File("tomcat-base");
+    }
+
     private static File resolveWebappDir() {
         String fromEnv = System.getenv("VENDORYX_WEBAPP_DIR");
         if (fromEnv != null && !fromEnv.isBlank()) {
             return new File(fromEnv.trim());
+        }
+        File hf = new File("/home/user/app/webapp");
+        if (hf.isDirectory()) {
+            return hf;
         }
         File container = new File("/app/webapp");
         if (container.isDirectory()) {
@@ -70,6 +93,10 @@ public class AppServer {
         String fromEnv = System.getenv("VENDORYX_CLASSES_DIR");
         if (fromEnv != null && !fromEnv.isBlank()) {
             return new File(fromEnv.trim());
+        }
+        File hf = new File("/home/user/app/classes");
+        if (hf.isDirectory()) {
+            return hf;
         }
         File container = new File("/app/classes");
         if (container.isDirectory()) {

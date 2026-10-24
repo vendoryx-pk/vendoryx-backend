@@ -2,7 +2,6 @@ target/
 .vscode/launch.json
 .vscode/settings.json
 .env
-.env.local
 *.log
 .idea/
 *.iml
