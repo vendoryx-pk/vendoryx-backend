@@ -13,6 +13,7 @@ import java.io.File;
 public class AppServer {
 
     public static void main(String[] args) throws Exception {
+        com.vendoryx.config.DotEnv.load();
         EnvConfig.validateRequired();
 
         int port = EnvConfig.port();

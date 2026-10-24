@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.vendoryx.config.DotEnv;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -18,7 +19,8 @@ public final class JwtUtil {
     private static final long EXPIRY_HOURS = 12;
 
     static {
-        String secret = System.getenv("VENDORYX_JWT_SECRET");
+        DotEnv.load();
+        String secret = DotEnv.get("VENDORYX_JWT_SECRET");
         if (secret == null || secret.isBlank()) {
             throw new ExceptionInInitializerError(
                     "Missing required environment variable: VENDORYX_JWT_SECRET "
